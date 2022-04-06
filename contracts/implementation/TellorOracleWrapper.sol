@@ -43,33 +43,50 @@ contract TellorOracleWrapper is IOracleWrapper, UsingTellor {
     /**
      * @notice Returns the oracle price in WAD format
      */
-    function getPrice() external view override returns (int256) {
-        (int256 _price, ) = _getCurrentValue();
+    function getPrice(bytes32 _queryId, uint256 _timestamp) external view returns (int256) {
+        (int256 _price, ) = _readPriceBefore(_queryId, _timestamp);
         return _price;
     }
+
+        /**
+     * @notice Returns the current price for the asset in question
+     * @return The latest price
+     */
+    function getPrice() external pure override returns (int256){
+        return 0;
+    }
+
+    /**
+     * @return _price The latest round data price
+     * @return _data The metadata. Implementations can choose what data to return here
+     */
+    function getPriceAndMetadata() external pure override returns (int256 _price, bytes memory _data){
+        return (0, bytes("0"));
+    }
+
 
     /**
      * @return _price The latest price
      * @return _data The metadata. Implementations can choose what data to return here. This implementation returns the timestamp
      */
-    function getPriceAndMetadata() external view override returns (int256, bytes memory) {
-        (int256 _price, uint256 _timestamp) = _getCurrentValue();
-        bytes memory _data = abi.encodePacked(_timestamp);
+    function getPriceAndMetadata(bytes32 _queryId, uint256 _timestamp) external view returns (int256, bytes memory) {
+        (int256 _price, uint256 _timestampReceived) = _readPriceBefore(_queryId, _timestamp);
+        bytes memory _data = abi.encodePacked(_timestampReceived);
         return (_price, _data);
     }
 
     /**
      * @dev An internal function that gets the WAD value price and latest timestamp
      */
-    function _getCurrentValue() internal view returns (int256, uint256) {
-        (bool _didGet, bytes memory _value, uint256 _timestamp) = getCurrentValue(queryId);
+    function _readPriceBefore(bytes32 _queryId, uint256 _timestamp) internal view returns (int256, uint256) {
+        (bool _didGet, bytes memory _value, uint256 _timestampReceived) = getDataBefore(_queryId, _timestamp);
         require(_didGet, "could not get current value");
         require(_value.length == 32, "value is not 32 bytes");
         int256 _price;
         assembly {
             _price := mload(add(_value, 0x20))
         }
-        return (toWad(_price), _timestamp);
+        return (toWad(_price), _timestampReceived);
     }
 
     /**
