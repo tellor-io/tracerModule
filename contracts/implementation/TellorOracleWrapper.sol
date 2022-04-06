@@ -14,18 +14,15 @@ contract TellorOracleWrapper is IOracleWrapper, UsingTellor {
     address public immutable override deployer;
     uint8 private constant MAX_DECIMALS = 18;
     int256 public scaler;
-    bytes32 public queryId;
 
     // #### Functions
     constructor(
         address payable _oracle,
-        bytes32 _queryId,
         address _deployer
     ) UsingTellor(_oracle) {
         require(_oracle != address(0), "Oracle cannot be null");
         require(_deployer != address(0), "Deployer cannot be null");
         oracle = _oracle;
-        queryId = _queryId;
         deployer = _deployer;
         // reset the scaler for consistency
         uint8 _decimals = IOracleWrapper(oracle).decimals();
