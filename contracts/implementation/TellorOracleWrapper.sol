@@ -26,7 +26,9 @@ contract TellorOracleWrapper is IOracleWrapper, UsingTellor {
         require(_deployer != address(0), "Deployer cannot be null");
         oracle = _oracle;
         deployer = _deployer;
-        queryId = _getQueryId(_poolId);
+        //Tellor query id
+        bytes memory _b = abi.encode("TracerFinance", abi.encode(_poolId));
+        queryId = keccak256(_b);
         // reset the scaler for consistency
         uint8 _decimals = IOracleWrapper(oracle).decimals();
         require(_decimals <= MAX_DECIMALS, "COA: too many decimals");
@@ -65,18 +67,8 @@ contract TellorOracleWrapper is IOracleWrapper, UsingTellor {
         (bool _didGet, bytes memory _value, uint256 _timestampReceived) = getDataBefore(_queryId, _timestamp);
         require(_didGet, "could not get current value");
         require(_value.length == 32, "value is not 32 bytes");
-        int256 _price;
-        assembly {
-            _price := mload(add(_value, 0x20))
-        }
+        int256 _price = abi.decode(_value, (int256));
         return (toWad(_price), _timestampReceived);
-    }
-
-    // Tellor query
-    function _getQueryId(uint256 _poolId) internal view returns (bytes32) {
-        bytes memory _b = abi.encode("TracerFinance", abi.encode(_poolId));
-        bytes32 _queryId = keccak256(_b);
-        return _queryId;
     }
 
     /**
