@@ -9,13 +9,14 @@ import {
     // TestChainlinkOracle__factory,
     UsingTellor__factory,
     // TestChainlinkOracle,
-    UsingTellor
+    UsingTellor,
 } from "../../types"
 const {
     abi,
     bytecode,
-  } = require("usingtellor/artifacts/contracts/TellorPlayground.sol/TellorPlayground.json");
+} = require("usingtellor/artifacts/contracts/TellorPlayground.sol/TellorPlayground.json")
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
+const h = require("usingtellor/test/helpers/helpers.js")
 
 chai.use(chaiAsPromised)
 const { expect } = chai
@@ -25,16 +26,40 @@ describe("OracleWrapper - getPrice", () => {
     let testOracle: UsingTellor
     let testOracle2: UsingTellor
     let signers: SignerWithAddress[]
+
+    let queryDataArgs: string
+    let queryData: string
+    let queryId: string
+    let valueEncoded: string
+    let abiCoder = new ethers.utils.AbiCoder()
+
+    let tellorOracle: any
+    let tellorOracleWrapper: any
+
     beforeEach(async () => {
-        // Deploy the contract
         signers = await ethers.getSigners()
+
+        // Deploy the tellor oracle contract
+        const TellorOracle = await ethers.getContractFactory(abi, bytecode)
+        tellorOracle = await TellorOracle.deploy()
+        await tellorOracle.deployed()
+
+        const TellorOracleWrapper = await ethers.getContractFactory(
+            "TellorOracleWrapper"
+        )
+        tellorOracleWrapper = await TellorOracleWrapper.deploy(
+            tellorOracle.address,
+            signers[0].address,
+            1
+        )
+        await tellorOracleWrapper.deployed()
+
         const tellorOracleFactory = (await ethers.getContractFactory(
             "UsingTellor",
             signers[0]
         )) as UsingTellor__factory
-        const tellorOracle = await tellorOracleFactory.deploy("0x0000000000000000000000000000000000000000")
+        await tellorOracleFactory.deploy(tellorOracle.address)
 
-        // Deploy tokens
         const oracleWrapperFactory = (await ethers.getContractFactory(
             "TellorOracleWrapper",
             signers[0]
@@ -46,15 +71,27 @@ describe("OracleWrapper - getPrice", () => {
         )
         await oracleWrapper.deployed()
 
-        // Deploy the sample oracle
+        // // Deploy the sample oracle
         const oracleFactory = (await ethers.getContractFactory(
             "UsingTellor",
             signers[0]
         )) as UsingTellor__factory
-        testOracle = await oracleFactory.deploy("0x0")
-        testOracle2 = await oracleFactory.deploy("0x0")
+        testOracle = await oracleFactory.deploy(tellorOracle.address)
+        testOracle2 = await oracleFactory.deploy(tellorOracle.address)
     })
     it("should return the current price for the requested market", async () => {
-        expect((await oracleWrapper.getPrice()).gte(0)).to.eq(true)
+        queryDataArgs = abiCoder.encode(["uint256"], ["1"])
+        queryData = abiCoder.encode(
+            ["string", "bytes"],
+            ["TracerFinance", queryDataArgs]
+        )
+        queryId = ethers.utils.keccak256(queryData)
+
+        valueEncoded = abiCoder.encode(["uint256"], [99])
+
+        await tellorOracle.submitValue(queryId, valueEncoded, 0, queryData)
+
+        await h.advanceTime(10000)
+        expect((await tellorOracleWrapper.getPrice()).toNumber()).to.equal(99)
     })
 })
