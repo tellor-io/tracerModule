@@ -30,7 +30,7 @@ contract TellorOracleWrapper is IOracleWrapper, UsingTellor {
         bytes memory _b = abi.encode("TracerFinance", abi.encode(_poolId));
         queryId = keccak256(_b);
         // reset the scaler for consistency
-        uint8 _decimals = IOracleWrapper(oracle).decimals();
+        uint8 _decimals = 18;
         require(_decimals <= MAX_DECIMALS, "COA: too many decimals");
         // scaler is always <= 10^18 and >= 1 so this cast is safe
         unchecked {
