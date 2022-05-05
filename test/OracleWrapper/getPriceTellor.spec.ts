@@ -60,17 +60,6 @@ describe("OracleWrapper - getPrice", () => {
         )) as UsingTellor__factory
         await tellorOracleFactory.deploy(tellorOracle.address)
 
-        const oracleWrapperFactory = (await ethers.getContractFactory(
-            "TellorOracleWrapper",
-            signers[0]
-        )) as TellorOracleWrapper__factory
-        oracleWrapper = await oracleWrapperFactory.deploy(
-            tellorOracle.address,
-            signers[0].address,
-            1
-        )
-        await oracleWrapper.deployed()
-
         // // Deploy the sample oracle
         const oracleFactory = (await ethers.getContractFactory(
             "UsingTellor",
